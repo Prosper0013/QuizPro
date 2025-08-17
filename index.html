@@ -1,1 +1,1790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Master App</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        :root {
+            --primary: #4a6bff;
+            --secondary: #ff6b6b;
+            --dark: #2c3e50;
+            --light: #f5f7fa;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+        }
 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light);
+            color: var(--dark);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Auth Screen */
+        .auth-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .auth-box {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .auth-box h1 {
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            cursor: pointer;
+            background: #eee;
+            border: none;
+        }
+
+        .auth-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .auth-form input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .auth-form button {
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .auth-form button:hover {
+            background: #3a5bed;
+        }
+
+        .google-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px;
+            background: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .google-btn:hover {
+            background: #357ae8;
+        }
+
+        /* Admin Dashboard */
+        .admin-dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: var(--dark);
+            color: white;
+            padding: 20px;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar button {
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            color: white;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .sidebar button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar button.active {
+            background: var(--primary);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            background: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Question Management */
+        .question-categories {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .category-btn {
+            padding: 8px 15px;
+            background: #eee;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .category-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .question-form {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .question-form textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            min-height: 80px;
+        }
+
+        .question-form .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .question-form .options input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .question-form select, .question-form input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .save-question {
+            padding: 10px 15px;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .question-list {
+            margin-top: 20px;
+        }
+
+        .question-item {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+
+        .question-item h4 {
+            margin-bottom: 10px;
+        }
+
+        .question-item .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .question-item .option {
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .question-item .option.correct {
+            background: rgba(46, 204, 113, 0.2);
+            border-left: 3px solid var(--success);
+        }
+
+        .question-item .meta {
+            display: flex;
+            justify-content: space-between;
+            color: #777;
+            font-size: 14px;
+        }
+
+        /* Contestant Interface */
+        .contestant-interface {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 40px);
+        }
+
+        .video-container {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 10px;
+        }
+
+        .admin-video, .contestants-grid, .observers-grid {
+            background: #eee;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .admin-video {
+            height: 200px;
+        }
+
+        .contestants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .observers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            padding: 10px;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #ddd;
+        }
+
+        .quiz-controls {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .question-display {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .question-display h3 {
+            margin-bottom: 15px;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .option {
+            padding: 10px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .option:hover {
+            background: #e0e0e0;
+        }
+
+        .option.selected {
+            background: var(--primary);
+            color: white;
+        }
+
+        .option.correct {
+            background: var(--success);
+            color: white;
+        }
+
+        .option.incorrect {
+            background: var(--danger);
+            color: white;
+        }
+
+        .timer {
+            height: 5px;
+            background: #eee;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .time-remaining {
+            height: 100%;
+            background: var(--primary);
+            width: 100%;
+            transition: width 1s linear;
+        }
+
+        .scoreboard {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .scoreboard h4 {
+            margin-bottom: 15px;
+        }
+
+        #contestant-scores {
+            list-style: none;
+        }
+
+        #contestant-scores li {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* Observer Interface */
+        .observer-interface {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 40px);
+        }
+
+        .video-feed {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 10px;
+        }
+
+        .main-video {
+            height: 300px;
+            background: #eee;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .participant-thumbnails {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+
+        .quiz-view {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .current-question {
+            margin-bottom: 15px;
+        }
+
+        .contestant-answer-status {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .contestant-answer-status.correct {
+            background: rgba(46, 204, 113, 0.2);
+            color: var(--success);
+        }
+
+        .contestant-answer-status.incorrect {
+            background: rgba(231, 76, 60, 0.2);
+            color: var(--danger);
+        }
+
+        .leaderboard {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        .leaderboard h4 {
+            margin-bottom: 10px;
+        }
+
+        .leaderboard ol {
+            padding-left: 20px;
+        }
+
+        .leaderboard li {
+            margin-bottom: 5px;
+        }
+
+        .chat-container {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-container h4 {
+            margin-bottom: 15px;
+        }
+
+        .chat-messages {
+            height: 200px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+
+        .chat-message {
+            margin-bottom: 10px;
+        }
+
+        .chat-message .sender {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .send-chat {
+            padding: 10px 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .contestant-interface, .observer-interface {
+                grid-template-columns: 1fr;
+            }
+            
+            .admin-dashboard {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="auth-container">
+        <div class="auth-box">
+            <h1>Quiz Master</h1>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="observer">Observer</button>
+                <button class="auth-tab" data-tab="contestant">Contestant</button>
+                <button class="auth-tab" data-tab="admin">Admin</button>
+            </div>
+            
+            <div id="observer-auth" class="auth-form">
+                <button id="google-signin" class="google-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Sign in with Google
+                </button>
+                <p class="mt-20">Observers can only join via Google authentication</p>
+            </div>
+            
+            <div id="contestant-auth" class="auth-form hidden">
+                <input type="text" id="contestant-username" placeholder="Username">
+                <input type="password" id="contestant-password" placeholder="Password">
+                <button id="contestant-login">Login</button>
+                <p id="contestant-error" class="text-center" style="color: var(--danger);"></p>
+            </div>
+            
+            <div id="admin-auth" class="auth-form hidden">
+                <input type="email" id="admin-email" placeholder="Admin Email">
+                <input type="password" id="admin-password" placeholder="Password">
+                <button id="admin-login">Login</button>
+                <p id="admin-error" class="text-center" style="color: var(--danger);"></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Admin Dashboard -->
+    <div id="admin-dashboard" class="admin-dashboard hidden">
+        <div class="sidebar">
+            <h2>Quiz Master</h2>
+            <ul>
+                <li><button class="sidebar-btn active" data-tab="questions">Manage Questions</button></li>
+                <li><button class="sidebar-btn" data-tab="contestants">Manage Contestants</button></li>
+                <li><button class="sidebar-btn" data-tab="quiz-control">Quiz Control</button></li>
+                <li><button class="sidebar-btn" data-tab="results">View Results</button></li>
+                <li><button id="admin-logout" style="margin-top: 30px;">Logout</button></li>
+            </ul>
+        </div>
+        
+        <div class="main-content">
+            <!-- Questions Tab -->
+            <div id="questions-tab" class="tab-content active">
+                <h3>Question Management</h3>
+                <div class="question-categories">
+                    <button class="category-btn active" data-category="math">Mathematics</button>
+                    <button class="category-btn" data-category="general">General Knowledge</button>
+                </div>
+                
+                <div class="question-form">
+                    <textarea id="question-text" placeholder="Enter question..."></textarea>
+                    <div class="options">
+                        <input type="text" id="option-a" placeholder="Option A">
+                        <input type="text" id="option-b" placeholder="Option B">
+                        <input type="text" id="option-c" placeholder="Option C">
+                        <input type="text" id="option-d" placeholder="Option D">
+                    </div>
+                    <select id="correct-answer" class="correct-answer">
+                        <option value="a">A</option>
+                        <option value="b">B</option>
+                        <option value="c">C</option>
+                        <option value="d">D</option>
+                    </select>
+                    <input type="number" id="question-points" placeholder="Points" class="points" value="10">
+                    <input type="number" id="question-time" placeholder="Time (seconds)" class="time-limit" value="30">
+                    <button id="save-question" class="save-question">Save Question</button>
+                </div>
+                
+                <div class="question-list" id="question-list">
+                    <!-- Questions will be loaded here -->
+                </div>
+            </div>
+            
+            <!-- Contestants Tab -->
+            <div id="contestants-tab" class="tab-content">
+                <h3>Contestant Management</h3>
+                <div class="question-form">
+                    <input type="text" id="contestant-name" placeholder="Contestant Name">
+                    <input type="password" id="contestant-pass" placeholder="Password">
+                    <button id="add-contestant" class="save-question">Add Contestant</button>
+                </div>
+                
+                <div class="question-list" id="contestant-list">
+                    <!-- Contestants will be loaded here -->
+                </div>
+            </div>
+            
+            <!-- Quiz Control Tab -->
+            <div id="quiz-control-tab" class="tab-content">
+                <h3>Quiz Control Panel</h3>
+                <div class="question-form">
+                    <label for="max-observers">Max Observers:</label>
+                    <input type="number" id="max-observers" placeholder="Max Observers" value="10" min="1" max="50">
+                    
+                    <label for="max-contestants">Max Contestants:</label>
+                    <input type="number" id="max-contestants" placeholder="Max Contestants" value="20" min="1" max="50">
+                    
+                    <button id="start-quiz" class="save-question">Start Quiz Session</button>
+                    <button id="end-quiz" class="save-question" style="background: var(--danger);">End Quiz Session</button>
+                </div>
+                
+                <div class="question-form">
+                    <h4>Current Section</h4>
+                    <div class="options">
+                        <button id="start-math" class="option">Start Mathematics</button>
+                        <button id="start-general" class="option">Start General Knowledge</button>
+                    </div>
+                    <button id="end-section" class="save-question" style="background: var(--warning);">End Current Section</button>
+                </div>
+                
+                <div id="current-quiz-status">
+                    <h4>Quiz Status: <span id="quiz-status">Not Started</span></h4>
+                    <h4>Current Section: <span id="current-section">None</span></h4>
+                    <h4>Current Contestant: <span id="current-contestant">None</span></h4>
+                </div>
+            </div>
+            
+            <!-- Results Tab -->
+            <div id="results-tab" class="tab-content">
+                <h3>Quiz Results</h3>
+                <div id="results-container">
+                    <!-- Results will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contestant Interface -->
+    <div id="contestant-interface" class="contestant-interface hidden">
+        <div class="video-container">
+            <div class="admin-video" id="admin-video">
+                <video id="admin-video-feed" autoplay playsinline></video>
+            </div>
+            <div class="contestants-grid" id="contestants-grid">
+                <!-- Contestant videos will be added here -->
+            </div>
+            <div class="observers-grid" id="observers-grid">
+                <!-- Observer videos will be added here -->
+            </div>
+        </div>
+        
+        <div class="quiz-controls">
+            <div class="question-display">
+                <h3 id="current-question-text">Waiting for question...</h3>
+                <div class="options" id="question-options">
+                    <!-- Options will be added here -->
+                </div>
+                <div class="timer">
+                    <div class="time-remaining" id="time-remaining"></div>
+                </div>
+                <p id="answer-feedback"></p>
+            </div>
+            
+            <div class="scoreboard">
+                <h4>Scoreboard</h4>
+                <ul id="contestant-scores">
+                    <!-- Scores will be added here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Observer Interface -->
+    <div id="observer-interface" class="observer-interface hidden">
+        <div class="video-feed">
+            <div class="main-video" id="main-video">
+                <video id="current-contestant-video" autoplay playsinline></video>
+            </div>
+            <div class="participant-thumbnails" id="participant-thumbnails">
+                <!-- Participant videos will be added here -->
+            </div>
+        </div>
+        
+        <div class="quiz-view">
+            <div class="current-question" id="observer-question">
+                <h4>Current Question</h4>
+                <p id="observer-question-text">Waiting for question...</p>
+                <div id="observer-options">
+                    <!-- Options will be added here -->
+                </div>
+            </div>
+            
+            <div class="contestant-answer-status" id="answer-status">
+                Waiting for contestant answer...
+            </div>
+            
+            <div class="leaderboard">
+                <h4>Leaderboard</h4>
+                <ol id="leaderboard-list">
+                    <!-- Leaderboard will be added here -->
+                </ol>
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <h4>Live Chat</h4>
+            <div class="chat-messages" id="chat-messages">
+                <!-- Chat messages will be added here -->
+            </div>
+            <input type="text" class="chat-input" id="chat-input" placeholder="Send a message...">
+            <button class="send-chat" id="send-chat">Send</button>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        // Socket.io connection
+        const socket = io('https://your-socket-server.com');
+
+        // DOM Elements
+        const authScreen = document.getElementById('auth-screen');
+        const adminDashboard = document.getElementById('admin-dashboard');
+        const contestantInterface = document.getElementById('contestant-interface');
+        const observerInterface = document.getElementById('observer-interface');
+        
+        // Auth elements
+        const authTabs = document.querySelectorAll('.auth-tab');
+        const authForms = {
+            observer: document.getElementById('observer-auth'),
+            contestant: document.getElementById('contestant-auth'),
+            admin: document.getElementById('admin-auth')
+        };
+        
+        const googleSignInBtn = document.getElementById('google-signin');
+        const contestantLoginBtn = document.getElementById('contestant-login');
+        const adminLoginBtn = document.getElementById('admin-login');
+        
+        // Admin elements
+        const sidebarBtns = document.querySelectorAll('.sidebar-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        // Question management
+        const categoryBtns = document.querySelectorAll('.category-btn');
+        const saveQuestionBtn = document.getElementById('save-question');
+        const questionList = document.getElementById('question-list');
+        
+        // Contestant management
+        const addContestantBtn = document.getElementById('add-contestant');
+        const contestantList = document.getElementById('contestant-list');
+        
+        // Quiz control
+        const startQuizBtn = document.getElementById('start-quiz');
+        const endQuizBtn = document.getElementById('end-quiz');
+        const startMathBtn = document.getElementById('start-math');
+        const startGeneralBtn = document.getElementById('start-general');
+        const endSectionBtn = document.getElementById('end-section');
+        
+        // Contestant interface
+        const currentQuestionText = document.getElementById('current-question-text');
+        const questionOptions = document.getElementById('question-options');
+        const timeRemaining = document.getElementById('time-remaining');
+        const answerFeedback = document.getElementById('answer-feedback');
+        const contestantScores = document.getElementById('contestant-scores');
+        
+        // Observer interface
+        const observerQuestionText = document.getElementById('observer-question-text');
+        const observerOptions = document.getElementById('observer-options');
+        const answerStatus = document.getElementById('answer-status');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendChatBtn = document.getElementById('send-chat');
+        
+        // Global variables
+        let currentUser = null;
+        let userRole = null;
+        let currentCategory = 'math';
+        let currentQuestion = null;
+        let selectedAnswer = null;
+        let timerInterval = null;
+        let timeLeft = 0;
+        let peerConnections = {};
+        let localStream = null;
+        
+        // Initialize the app
+        function init() {
+            setupEventListeners();
+            checkAuthState();
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Auth tab switching
+            authTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    authTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    Object.values(authForms).forEach(form => form.classList.add('hidden'));
+                    authForms[tab.dataset.tab].classList.remove('hidden');
+                });
+            });
+            
+            // Google sign-in
+            googleSignInBtn.addEventListener('click', signInWithGoogle);
+            
+            // Contestant login
+            contestantLoginBtn.addEventListener('click', contestantLogin);
+            
+            // Admin login
+            adminLoginBtn.addEventListener('click', adminLogin);
+            
+            // Admin logout
+            document.getElementById('admin-logout').addEventListener('click', logout);
+            
+            // Admin sidebar navigation
+            sidebarBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    sidebarBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    document.getElementById(`${btn.dataset.tab}-tab`).classList.add('active');
+                });
+            });
+            
+            // Question category switching
+            categoryBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    categoryBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentCategory = btn.dataset.category;
+                    loadQuestions();
+                });
+            });
+            
+            // Save question
+            saveQuestionBtn.addEventListener('click', saveQuestion);
+            
+            // Add contestant
+            addContestantBtn.addEventListener('click', addContestant);
+            
+            // Quiz control
+            startQuizBtn.addEventListener('click', startQuiz);
+            endQuizBtn.addEventListener('click', endQuiz);
+            startMathBtn.addEventListener('click', () => startSection('math'));
+            startGeneralBtn.addEventListener('click', () => startSection('general'));
+            endSectionBtn.addEventListener('click', endSection);
+            
+            // Socket.io events
+            socket.on('connect', () => {
+                console.log('Connected to socket server');
+            });
+            
+            socket.on('question-selected', (data) => {
+                displayQuestion(data.question);
+                if (userRole === 'contestant' && data.contestantId === currentUser.uid) {
+                    enableAnswerSelection();
+                }
+            });
+            
+            socket.on('answer-result', (data) => {
+                showAnswerResult(data.isCorrect, data.correctAnswer, data.contestantName);
+                if (data.isCorrect) {
+                    updateScoreboard(data.contestantId, data.points);
+                }
+            });
+            
+            socket.on('next-contestant', (contestantId) => {
+                setCurrentContestant(contestantId);
+            });
+            
+            socket.on('quiz-started', () => {
+                if (userRole === 'admin') {
+                    document.getElementById('quiz-status').textContent = 'Active';
+                }
+            });
+            
+            socket.on('quiz-ended', () => {
+                if (userRole === 'admin') {
+                    document.getElementById('quiz-status').textContent = 'Ended';
+                } else {
+                    alert('Quiz has ended!');
+                }
+            });
+            
+            socket.on('section-started', (section) => {
+                if (userRole === 'admin') {
+                    document.getElementById('current-section').textContent = section;
+                }
+            });
+            
+            socket.on('section-ended', () => {
+                if (userRole === 'admin') {
+                    document.getElementById('current-section').textContent = 'None';
+                }
+            });
+            
+            socket.on('chat-message', (message) => {
+                displayChatMessage(message);
+            });
+            
+            // WebRTC events
+            socket.on('user-connected', (userId) => {
+                if (userId !== currentUser.uid) {
+                    connectToNewUser(userId, localStream);
+                }
+            });
+            
+            socket.on('user-signal', (payload) => {
+                const peer = peerConnections[payload.id];
+                if (peer) {
+                    peer.signal(payload.signal);
+                }
+            });
+            
+            socket.on('user-disconnected', (userId) => {
+                removeVideo(userId);
+                if (peerConnections[userId]) {
+                    peerConnections[userId].close();
+                    delete peerConnections[userId];
+                }
+            });
+            
+            // Contestant answer selection
+            questionOptions.addEventListener('click', (e) => {
+                if (e.target.classList.contains('option') && !e.target.disabled) {
+                    const options = questionOptions.querySelectorAll('.option');
+                    options.forEach(opt => opt.classList.remove('selected'));
+                    e.target.classList.add('selected');
+                    selectedAnswer = e.target.dataset.option;
+                }
+            });
+            
+            // Observer chat
+            sendChatBtn.addEventListener('click', sendChatMessage);
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendChatMessage();
+                }
+            });
+        }
+        
+        // Check auth state
+        function checkAuthState() {
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    currentUser = user;
+                    checkUserRole(user.uid);
+                } else {
+                    showAuthScreen();
+                }
+            });
+        }
+        
+        // Check user role
+        function checkUserRole(userId) {
+            db.collection('users').doc(userId).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        userRole = doc.data().role;
+                        initializeUserInterface();
+                    } else {
+                        // Default to observer if not in database
+                        userRole = 'observer';
+                        initializeUserInterface();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking user role:', error);
+                });
+        }
+        
+        // Initialize user interface based on role
+        function initializeUserInterface() {
+            hideAllInterfaces();
+            
+            switch(userRole) {
+                case 'admin':
+                    showAdminDashboard();
+                    loadQuestions();
+                    loadContestants();
+                    setupVideo();
+                    break;
+                case 'contestant':
+                    showContestantInterface();
+                    setupVideo();
+                    break;
+                case 'observer':
+                    showObserverInterface();
+                    setupVideo();
+                    break;
+                default:
+                    showAuthScreen();
+            }
+        }
+        
+        // Hide all interfaces
+        function hideAllInterfaces() {
+            authScreen.classList.add('hidden');
+            adminDashboard.classList.add('hidden');
+            contestantInterface.classList.add('hidden');
+            observerInterface.classList.add('hidden');
+        }
+        
+        // Show auth screen
+        function showAuthScreen() {
+            hideAllInterfaces();
+            authScreen.classList.remove('hidden');
+        }
+        
+        // Show admin dashboard
+        function showAdminDashboard() {
+            hideAllInterfaces();
+            adminDashboard.classList.remove('hidden');
+        }
+        
+        // Show contestant interface
+        function showContestantInterface() {
+            hideAllInterfaces();
+            contestantInterface.classList.remove('hidden');
+        }
+        
+        // Show observer interface
+        function showObserverInterface() {
+            hideAllInterfaces();
+            observerInterface.classList.remove('hidden');
+        }
+        
+        // Sign in with Google
+        function signInWithGoogle() {
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    const user = result.user;
+                    // Check if user is already in database
+                    db.collection('users').doc(user.uid).get()
+                        .then(doc => {
+                            if (!doc.exists) {
+                                // Add new observer to database
+                                db.collection('users').doc(user.uid).set({
+                                    email: user.email,
+                                    name: user.displayName,
+                                    role: 'observer',
+                                    avatar: user.photoURL
+                                });
+                            }
+                        });
+                })
+                .catch((error) => {
+                    console.error('Google sign-in error:', error);
+                });
+        }
+        
+        // Contestant login
+        function contestantLogin() {
+            const username = document.getElementById('contestant-username').value;
+            const password = document.getElementById('contestant-password').value;
+            
+            if (!username || !password) {
+                document.getElementById('contestant-error').textContent = 'Please enter username and password';
+                return;
+            }
+            
+            // In a real app, you would verify against your database
+            // This is a simplified version
+            db.collection('contestants').where('username', '==', username)
+                .where('password', '==', password)
+                .get()
+                .then(querySnapshot => {
+                    if (!querySnapshot.empty) {
+                        const doc = querySnapshot.docs[0];
+                        currentUser = {
+                            uid: doc.id,
+                            displayName: doc.data().name
+                        };
+                        userRole = 'contestant';
+                        initializeUserInterface();
+                    } else {
+                        document.getElementById('contestant-error').textContent = 'Invalid username or password';
+                    }
+                })
+                .catch(error => {
+                    console.error('Login error:', error);
+                    document.getElementById('contestant-error').textContent = 'Login failed';
+                });
+        }
+        
+        // Admin login
+        function adminLogin() {
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            
+            if (!email || !password) {
+                document.getElementById('admin-error').textContent = 'Please enter email and password';
+                return;
+            }
+            
+            // In a real app, you would have proper admin authentication
+            // This is a simplified version
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    db.collection('users').doc(user.uid).get()
+                        .then(doc => {
+                            if (doc.exists && doc.data().role === 'admin') {
+                                currentUser = user;
+                                userRole = 'admin';
+                                initializeUserInterface();
+                            } else {
+                                auth.signOut();
+                                document.getElementById('admin-error').textContent = 'Not an admin account';
+                            }
+                        });
+                })
+                .catch((error) => {
+                    console.error('Admin login error:', error);
+                    document.getElementById('admin-error').textContent = 'Login failed';
+                });
+        }
+        
+        // Logout
+        function logout() {
+            auth.signOut()
+                .then(() => {
+                    currentUser = null;
+                    userRole = null;
+                    showAuthScreen();
+                })
+                .catch((error) => {
+                    console.error('Logout error:', error);
+                });
+        }
+        
+        // Load questions from database
+        function loadQuestions() {
+            questionList.innerHTML = '<p>Loading questions...</p>';
+            
+            db.collection('questions')
+                .where('category', '==', currentCategory)
+                .get()
+                .then(querySnapshot => {
+                    if (querySnapshot.empty) {
+                        questionList.innerHTML = '<p>No questions found for this category</p>';
+                        return;
+                    }
+                    
+                    questionList.innerHTML = '';
+                    querySnapshot.forEach(doc => {
+                        const question = doc.data();
+                        question.id = doc.id;
+                        renderQuestion(question);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading questions:', error);
+                    questionList.innerHTML = '<p>Error loading questions</p>';
+                });
+        }
+        
+        // Render question in the list
+        function renderQuestion(question) {
+            const questionItem = document.createElement('div');
+            questionItem.className = 'question-item';
+            questionItem.dataset.id = question.id;
+            
+            const optionsHtml = Object.entries(question.options).map(([key, value]) => {
+                const isCorrect = key === question.correctAnswer;
+                return `<div class="option ${isCorrect ? 'correct' : ''}">${key.toUpperCase()}: ${value}</div>`;
+            }).join('');
+            
+            questionItem.innerHTML = `
+                <h4>${question.text}</h4>
+                <div class="options">${optionsHtml}</div>
+                <div class="meta">
+                    <span>Points: ${question.points}</span>
+                    <span>Time: ${question.timeLimit}s</span>
+                </div>
+                <button class="delete-question" data-id="${question.id}">Delete</button>
+            `;
+            
+            questionList.appendChild(questionItem);
+            
+            // Add delete event listener
+            questionItem.querySelector('.delete-question').addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteQuestion(question.id);
+            });
+            
+            // Add click event to select question
+            questionItem.addEventListener('click', () => {
+                if (userRole === 'admin') {
+                    selectQuestionForQuiz(question);
+                }
+            });
+        }
+        
+        // Save question to database
+        function saveQuestion() {
+            const text = document.getElementById('question-text').value.trim();
+            const optionA = document.getElementById('option-a').value.trim();
+            const optionB = document.getElementById('option-b').value.trim();
+            const optionC = document.getElementById('option-c').value.trim();
+            const optionD = document.getElementById('option-d').value.trim();
+            const correctAnswer = document.getElementById('correct-answer').value;
+            const points = parseInt(document.getElementById('question-points').value) || 10;
+            const timeLimit = parseInt(document.getElementById('question-time').value) || 30;
+            
+            if (!text || !optionA || !optionB || !optionC || !optionD) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            const question = {
+                text,
+                options: {
+                    a: optionA,
+                    b: optionB,
+                    c: optionC,
+                    d: optionD
+                },
+                correctAnswer,
+                points,
+                timeLimit,
+                category: currentCategory,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            db.collection('questions').add(question)
+                .then(() => {
+                    alert('Question saved successfully');
+                    // Clear form
+                    document.getElementById('question-text').value = '';
+                    document.getElementById('option-a').value = '';
+                    document.getElementById('option-b').value = '';
+                    document.getElementById('option-c').value = '';
+                    document.getElementById('option-d').value = '';
+                    document.getElementById('correct-answer').value = 'a';
+                    document.getElementById('question-points').value = '10';
+                    document.getElementById('question-time').value = '30';
+                    
+                    // Reload questions
+                    loadQuestions();
+                })
+                .catch(error => {
+                    console.error('Error saving question:', error);
+                    alert('Failed to save question');
+                });
+        }
+        
+        // Delete question
+        function deleteQuestion(questionId) {
+            if (confirm('Are you sure you want to delete this question?')) {
+                db.collection('questions').doc(questionId).delete()
+                    .then(() => {
+                        loadQuestions();
+                    })
+                    .catch(error => {
+                        console.error('Error deleting question:', error);
+                    alert('Failed to delete question');
+                    loadQuestions();
+                    });
+            }
+        }
+        
+        // Load contestants from database
+        function loadContestants() {
+            contestantList.innerHTML = '<p>Loading contestants...</p>';
+            
+            db.collection('contestants').get()
+                .then(querySnapshot => {
+                    if (querySnapshot.empty) {
+                        contestantList.innerHTML = '<p>No contestants found</p>';
+                        return;
+                    }
+                    
+                    contestantList.innerHTML = '';
+                    querySnapshot.forEach(doc => {
+                        const contestant = doc.data();
+                        contestant.id = doc.id;
+                        renderContestant(contestant);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading contestants:', error);
+                    contestantList.innerHTML = '<p>Error loading contestants</p>';
+                });
+        }
+        
+        // Render contestant in the list
+        function renderContestant(contestant) {
+            const contestantItem = document.createElement('div');
+            contestantItem.className = 'question-item';
+            contestantItem.dataset.id = contestant.id;
+            
+            contestantItem.innerHTML = `
+                <h4>${contestant.name}</h4>
+                <div class="meta">
+                    <span>Username: ${contestant.username}</span>
+                </div>
+                <button class="delete-contestant" data-id="${contestant.id}">Delete</button>
+            `;
+            
+            contestantList.appendChild(contestantItem);
+            
+            // Add delete event listener
+            contestantItem.querySelector('.delete-contestant').addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteContestant(contestant.id);
+            });
+        }
+        
+        // Add contestant
+        function addContestant() {
+            const name = document.getElementById('contestant-name').value.trim();
+            const username = name.toLowerCase().replace(/\s+/g, '_');
+            const password = document.getElementById('contestant-pass').value.trim();
+            
+            if (!name || !password) {
+                alert('Please enter contestant name and password');
+                return;
+            }
+            
+            const contestant = {
+                name,
+                username,
+                password, // In a real app, you would hash this
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            db.collection('contestants').add(contestant)
+                .then(() => {
+                    alert('Contestant added successfully');
+                    // Clear form
+                    document.getElementById('contestant-name').value = '';
+                    document.getElementById('contestant-pass').value = '';
+                    
+                    // Reload contestants
+                    loadContestants();
+                })
+                .catch(error => {
+                    console.error('Error adding contestant:', error);
+                    alert('Failed to add contestant');
+                });
+        }
+        
+        // Delete contestant
+        function deleteContestant(contestantId) {
+            if (confirm('Are you sure you want to delete this contestant?')) {
+                db.collection('contestants').doc(contestantId).delete()
+                    .then(() => {
+                        loadContestants();
+                    })
+                    .catch(error => {
+                        console.error('Error deleting contestant:', error);
+                        alert('Failed to delete contestant');
+                    });
+            }
+        }
+        
+        // Start quiz session
+        function startQuiz() {
+            const maxObservers = parseInt(document.getElementById('max-observers').value) || 10;
+            const maxContestants = parseInt(document.getElementById('max-contestants').value) || 20;
+            
+            socket.emit('start-quiz', {
+                maxObservers,
+                maxContestants,
+                adminId: currentUser.uid
+            });
+            
+            document.getElementById('quiz-status').textContent = 'Active';
+        }
+        
+        // End quiz session
+        function endQuiz() {
+            socket.emit('end-quiz');
+            document.getElementById('quiz-status').textContent = 'Ended';
+        }
+        
+        // Start quiz section
+        function startSection(section) {
+            socket.emit('start-section', {
+                section,
+                adminId: currentUser.uid
+            });
+            
+            document.getElementById('current-section').textContent = section;
+        }
+        
+        // End current section
+        function endSection() {
+            socket.emit('end-section');
+            document.getElementById('current-section').textContent = 'None';
+        }
+        
+        // Select question for quiz
+        function selectQuestionForQuiz(question) {
+            if (confirm(`Select this question for the quiz?\n\n${question.text}`)) {
+                socket.emit('select-question', {
+                    question,
+                    adminId: currentUser.uid
+                });
+            }
+        }
+        
+        // Display question to contestants
+        function displayQuestion(question) {
+            currentQuestion = question;
+            
+            if (userRole === 'contestant') {
+                currentQuestionText.textContent = question.text;
+                questionOptions.innerHTML = '';
+                
+                Object.entries(question.options).forEach(([key, value]) => {
+                    const optionBtn = document.createElement('button');
+                    optionBtn.className = 'option';
+                    optionBtn.dataset.option = key;
+                    optionBtn.textContent = `${key.toUpperCase()}: ${value}`;
+                    optionBtn.disabled = true;
+                    questionOptions.appendChild(optionBtn);
+                });
+                
+                // Start timer
+                startTimer(question.timeLimit);
+            } else if (userRole === 'observer') {
+                observerQuestionText.textContent = question.text;
+                observerOptions.innerHTML = '';
+                
+                Object.entries(question.options).forEach(([key, value]) => {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'option';
+                    optionDiv.textContent = `${key.toUpperCase()}: ${value}`;
+                    observerOptions.appendChild(optionDiv);
+                });
+            }
+        }
+        
+        // Enable answer selection for current contestant
+        function enableAnswerSelection() {
+            const options = questionOptions.querySelectorAll('.option');
+            options.forEach(opt => {
+                opt.disabled = false;
+            });
+        }
+        
+        // Start timer
+        function startTimer(seconds) {
+            clearInterval(timerInterval);
+            timeLeft = seconds;
+            updateTimerDisplay();
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    if (userRole === 'contestant' && selectedAnswer) {
+                        submitAnswer();
+                    }
+                }
+            }, 1000);
+        }
+        
+        // Update timer display
+        function updateTimerDisplay() {
+            const percentage = (timeLeft / currentQuestion.timeLimit) * 100;
+            timeRemaining.style.width = `${percentage}%`;
+        }
+        
+        // Submit answer
+        function submitAnswer() {
+            if (!selectedAnswer || !currentQuestion) return;
+            
+            const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+            
+            socket.emit('submit-answer', {
+                questionId: currentQuestion.id,
+                answer: selectedAnswer,
+                isCorrect,
+                contestantId: currentUser.uid,
+                contestantName: currentUser.displayName || 'Contestant',
+                points: isCorrect ? currentQuestion.points : 0
+            });
+            
+            // Disable options after submission
+            const options = questionOptions.querySelectorAll('.option');
+            options.forEach(opt => {
+                opt.disabled = true;
+            });
+        }
+        
+        // Show answer result
+        function showAnswerResult(isCorrect, correctAnswer, contestantName) {
+            if (userRole === 'contestant') {
+                const selectedOption = questionOptions.querySelector(`.option[data-option="${selectedAnswer}"]`);
+                const correctOption = questionOptions.querySelector(`.option[data-option="${correctAnswer}"]`);
+                
+                if (selectedOption) {
+                    selectedOption.classList.add(isCorrect ? 'correct' : 'incorrect');
+                }
+                
+                if (correctOption && !isCorrect) {
+                    correctOption.classList.add('correct');
+                }
+                
+                answerFeedback.textContent = isCorrect 
+                    ? 'Correct! Well done!' 
+                    : `Incorrect. The correct answer is ${correctAnswer.toUpperCase()}`;
+                
+                answerFeedback.style.color = isCorrect ? 'var(--success)' : 'var(--danger)';
+            } else if (userRole === 'observer') {
+                answerStatus.textContent = `${contestantName} answered ${isCorrect ? 'correctly' : 'incorrectly'}`;
+                answerStatus.className = `contestant-answer-status ${isCorrect ? 'correct' : 'incorrect'}`;
+                
+                const options = observerOptions.querySelectorAll('.option');
+                options.forEach(opt => {
+                    if (opt.textContent.startsWith(correctAnswer.toUpperCase())) {
+                        opt.classList.add('correct');
+                    }
+                });
+            }
+        }
+        
+        // Set current contestant
+        function setCurrentContestant(contestantId) {
+            if (userRole === 'admin') {
+                document.getElementById('current-contestant').textContent = contestantId;
+            }
+            // In a real app, you would fetch contestant name from database
+        }
+        
+        // Update scoreboard
+        function updateScoreboard(contestantId, points) {
+            // In a real app, you would update the score in database
+            // This is a simplified version
+            if (userRole === 'contestant' || userRole === 'observer') {
+                // This would normally come from the server
+                const scoreboard = {};
+                
+                if (!scoreboard[contestantId]) {
+                    scoreboard[contestantId] = 0;
+                }
+                
+                scoreboard[contestantId] += points;
+                
+                // Update UI
+                contestantScores.innerHTML = '';
+                Object.entries(scoreboard).forEach(([id, score]) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span>Contestant ${id}</span><span>${score} pts</span>`;
+                    contestantScores.appendChild(li);
+                });
+            }
+        }
+        
+        // Setup video
+        function setupVideo() {
+            navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
+            }).then(stream => {
+                localStream = stream;
+                
+                if (userRole === 'admin') {
+                    const adminVideo = document.getElementById('admin-video-feed');
+                    if (adminVideo) {
+                        adminVideo.srcObject = stream;
+                    }
+                } else if (userRole === 'contestant') {
+                    // Contestant video would be added to the grid by the admin
+                } else if (userRole === 'observer') {
+                    // Observer video would be added to the thumbnails
+                }
+                
+                // Notify server that we're ready to connect
+                socket.emit('join-room', {
+                    userId: currentUser.uid,
+                    role: userRole,
+                    roomId: 'quiz-room' // In a real app, this would be dynamic
+                });
+            }).catch(error => {
+                console.error('Error accessing media devices:', error);
+            });
+        }
+        
+        // Connect to new user (WebRTC)
+        function connectToNewUser(userId, stream) {
+            if (userId === currentUser.uid) return;
+            
+            // In a real app, you would use a WebRTC library like SimplePeer
+            console.log(`Connecting to user ${userId}`);
+            
+            // This is a placeholder for actual WebRTC connection logic
+            // In a real implementation, you would:
+            // 1. Create a new RTCPeerConnection
+            // 2. Add your local stream
+            // 3. Exchange ICE candidates and session descriptions via the signaling server (Socket.io)
+            // 4. Add the remote stream to the appropriate video element
+            
+            // For this example, we'll just simulate it
+            setTimeout(() => {
+                if (userRole === 'admin') {
+                    addContestantVideo(userId);
+                } else if (userRole === 'observer') {
+                    addParticipantVideo(userId);
+                }
+            }, 1000);
+        }
+        
+        // Add contestant video (simulated)
+        function addContestantVideo(userId) {
+            const video = document.createElement('video');
+            video.autoplay = true;
+            video.playsInline = true;
+            video.id = `video-${userId}`;
+            
+            // In a real app, this would be the remote stream
+            video.srcObject = localStream;
+            
+            const container = document.createElement('div');
+            container.className = 'contestant-video';
+            container.appendChild(video);
+            container.innerHTML += `<p>Contestant ${userId}</p>`;
+            
+            document.getElementById('contestants-grid').appendChild(container);
+        }
+        
+        // Add participant video (simulated)
+        function addParticipantVideo(userId) {
+            const video = document.createElement('video');
+            video.autoplay = true;
+            video.playsInline = true;
+            video.id = `video-${userId}`;
+            
+            // In a real app, this would be the remote stream
+            video.srcObject = localStream;
+            
+            const container = document.createElement('div');
+            container.className = 'participant-video';
+            container.appendChild(video);
+            container.innerHTML += `<p>Participant ${userId}</p>`;
+            
+            document.getElementById('participant-thumbnails').appendChild(container);
+        }
+        
+        // Remove video
+        function removeVideo(userId) {
+            const video = document.getElementById(`video-${userId}`);
+            if (video) {
+                video.parentElement.remove();
+            }
+        }
+        
+        // Send chat message
+        function sendChatMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+            
+            socket.emit('chat-message', {
+                userId: currentUser.uid,
+                userName: currentUser.displayName || 'Observer',
+                message,
+                timestamp: new Date().toISOString()
+            });
+            
+            chatInput.value = '';
+        }
+        
+        // Display chat message
+        function displayChatMessage(data) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            messageDiv.innerHTML = `
+                <span class="sender">${data.userName}:</span>
+                <span>${data.message}</span>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
